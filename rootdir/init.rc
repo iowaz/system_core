@@ -1156,12 +1156,13 @@ on post-fs-data
     # Update dm-verity state and set partition.*.verified properties.
     verity_update_state
 
-on early-init && property:persist.sys.evox.spoof.migrated=
-    setprop persist.sys.evox.spoof.migrated 0
-
-on post-fs-data && property:persist.sys.evox.spoof.migrated=0
-    exec - root root -- /system/bin/rm -rf /data/adb/tricky_store /data/adb/playintegrityfix /data/adb/gameprops /data/adb/.custom_rom_hide_allowlist
-    setprop persist.sys.evox.spoof.migrated 1
+# evox20: the one-time cleanup of external Play Integrity module data under /data/adb
+# no longer runs or keeps a marker. Clear a marker an older build persisted (init
+# drops a persistent property whose value becomes empty).
+on property:persist.sys.evox.spoof.migrated=0
+    setprop persist.sys.evox.spoof.migrated ""
+on property:persist.sys.evox.spoof.migrated=1
+    setprop persist.sys.evox.spoof.migrated ""
 
 on property:vold.checkpoint_committed=1
     trigger post-fs-data-checkpointed
