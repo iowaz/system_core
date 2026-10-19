@@ -240,8 +240,15 @@ void WritePersistentProperty(const std::string& name, const std::string& value) 
         if (it->value() == value) {
             return;
         }
-        it->set_name(name);
-        it->set_value(value);
+        if (value.empty()) {
+            // An empty value unsets a persistent property: drop its record.
+            persistent_properties->mutable_properties()->erase(it);
+        } else {
+            it->set_name(name);
+            it->set_value(value);
+        }
+    } else if (value.empty()) {
+        return;
     } else {
         AddPersistentProperty(name, value, &persistent_properties.value());
     }
