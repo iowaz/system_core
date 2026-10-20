@@ -48,6 +48,11 @@ namespace {
 
 constexpr const char kLegacyPersistentPropertyDir[] = "/data/property";
 
+// evox20 retires the persist.sys.evox.spoof.migrated marker: init.rc sets it to an empty value
+// and init drops its record. Every other persistent property keeps an empty value as a record,
+// so it still overrides a build.prop default after a reboot.
+constexpr const char kRetiredPersistPrefix[] = "persist.sys.evox.";
+
 void AddPersistentProperty(const std::string& name, const std::string& value,
                            PersistentProperties* persistent_properties) {
     auto persistent_property_record = persistent_properties->add_properties();
@@ -236,18 +241,19 @@ void WritePersistentProperty(const std::string& name, const std::string& value) 
     auto it = std::find_if(persistent_properties->mutable_properties()->begin(),
                            persistent_properties->mutable_properties()->end(),
                            [&name](const auto& record) { return record.name() == name; });
+    const bool drop_record = value.empty() && StartsWith(name, kRetiredPersistPrefix);
     if (it != persistent_properties->mutable_properties()->end()) {
         if (it->value() == value) {
             return;
         }
-        if (value.empty()) {
-            // An empty value unsets a persistent property: drop its record.
+        if (drop_record) {
+            // An empty value unsets a retired evox marker: drop its record.
             persistent_properties->mutable_properties()->erase(it);
         } else {
             it->set_name(name);
             it->set_value(value);
         }
-    } else if (value.empty()) {
+    } else if (drop_record) {
         return;
     } else {
         AddPersistentProperty(name, value, &persistent_properties.value());
